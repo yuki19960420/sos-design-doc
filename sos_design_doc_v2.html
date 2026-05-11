@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SOS 流程设计</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg: #F7F6F2;
+    --surface: #FFFFFF;
+    --surface2: #F0EEE8;
+    --border: #E2DED4;
+    --border-strong: #C8C3B8;
+    --text-primary: #1A1916;
+    --text-secondary: #5C5A54;
+    --text-tertiary: #9C9A94;
+    --red-bg: #FEF0EE; --red-border: #F5C0B8; --red-text: #8C2A1E;
+    --amber-bg: #FEF5E7; --amber-border: #F5D898; --amber-text: #7A4E0A;
+    --green-bg: #EEF7EE; --green-border: #B8DFB8; --green-text: #1E5C2A;
+    --blue-bg: #EEF3FE; --blue-border: #B8CCF5; --blue-text: #1A3A8C;
+    --gray-bg: #F0EEE8; --gray-border: #D4D0C8; --gray-text: #4A4844;
+    --teal-bg: #EEF7F5; --teal-border: #B8DDD8; --teal-text: #1A5C54;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Noto Sans SC', sans-serif;
+    background: var(--bg);
+    color: var(--text-primary);
+    font-size: 14px;
+    line-height: 1.7;
+  }
+
+  /* ── Header ── */
+  .header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 28px 48px 24px;
+    position: relative;
+  }
+  .header-meta {
+    font-size: 11px; font-weight: 500; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--text-tertiary);
+    margin-bottom: 8px;
+  }
+  .header h1 {
+    font-size: 24px; font-weight: 700; color: var(--text-primary);
+    letter-spacing: -.02em; margin-bottom: 6px;
+  }
+  .header-desc {
+    font-size: 13px; color: var(--text-secondary); max-width: 600px;
+  }
+  .header-author {
+    position: absolute; top: 28px; right: 48px;
+    font-size: 12px; color: var(--text-tertiary);
+    text-align: right; line-height: 1.6;
+    font-variant-numeric: tabular-nums;
+  }
+  .header-author .name {
+    display: block; font-size: 13px; font-weight: 500;
+    color: var(--text-secondary); margin-top: 2px;
+  }
+
+  /* ── Layout ── */
+  .main { max-width: 1100px; margin: 0 auto; padding: 0 48px 80px; }
+
+  /* ── TAB BAR (top-level, prominent) ── */
+  .main-tab-bar {
+    display: flex; gap: 0;
+    border-bottom: 2px solid var(--border);
+    margin-bottom: 32px;
+    background: var(--surface);
+    position: sticky; top: 0; z-index: 10;
+    padding: 0 48px;
+    margin-left: -48px; margin-right: -48px;
+    box-shadow: 0 1px 0 var(--border);
+  }
+  .main-tab-btn {
+    font-family: 'Noto Sans SC', sans-serif;
+    font-size: 13px; font-weight: 500;
+    color: var(--text-tertiary);
+    background: none; border: none;
+    padding: 16px 22px 14px;
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    margin-bottom: -2px;
+    transition: color .15s, border-color .15s;
+    white-space: nowrap;
+    position: relative;
+  }
+  .main-tab-btn:hover { color: var(--text-primary); }
+  .main-tab-btn.active {
+    color: var(--text-primary);
+    font-weight: 700;
+    border-bottom-color: var(--text-primary);
+  }
+  .main-tab-btn .tab-index {
+    font-size: 10px; font-weight: 400;
+    color: var(--text-tertiary);
+    margin-right: 6px;
+    font-variant-numeric: tabular-nums;
+  }
+  .main-tab-btn.active .tab-index { color: var(--text-secondary); }
+
+  .main-tab-panel { display: none; padding-top: 32px; }
+  .main-tab-panel.active { display: block; }
+
+  /* ── Section heading ── */
+  .section-heading {
+    font-size: 11px; font-weight: 700; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--text-tertiary);
+    margin: 36px 0 14px; padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .section-heading:first-child { margin-top: 0; }
+
+  /* ── Legend ── */
+  .legend {
+    display: flex; gap: 10px; flex-wrap: wrap;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 14px 18px; margin-bottom: 20px;
+  }
+  .legend-item { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--text-secondary); }
+  .ldot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+  /* ── Info boxes ── */
+  .info-box {
+    border-radius: 10px; padding: 13px 17px;
+    font-size: 13px; line-height: 1.75; margin-bottom: 14px;
+    border: 1px solid;
+  }
+  .info-box strong { font-weight: 600; }
+  .info-box.green { background: var(--green-bg); border-color: var(--green-border); color: var(--green-text); }
+  .info-box.amber { background: var(--amber-bg); border-color: var(--amber-border); color: var(--amber-text); }
+  .info-box .ib-title { font-weight: 600; margin-bottom: 5px; }
+
+  /* ── Flow grid ── */
+  .flow-grid {
+    display: grid;
+    grid-template-columns: 110px 1fr 1fr 1fr 1fr;
+    gap: 6px; margin-bottom: 6px;
+  }
+  .flow-col-head {
+    font-size: 11px; font-weight: 600; color: var(--text-tertiary);
+    padding: 0 4px 6px; display: flex; align-items: center; gap: 5px;
+  }
+  .phase-label {
+    display: flex; flex-direction: column; justify-content: center;
+    padding: 10px; border-radius: 8px;
+    font-size: 12px; font-weight: 600; min-height: 60px; border: 1px solid;
+  }
+  .phase-label .sub { font-size: 10px; font-weight: 400; margin-top: 2px; opacity: .75; }
+  .pl-blue   { background: var(--blue-bg);  border-color: var(--blue-border);  color: var(--blue-text); }
+  .pl-green  { background: var(--green-bg); border-color: var(--green-border); color: var(--green-text); }
+  .pl-amber  { background: var(--amber-bg); border-color: var(--amber-border); color: var(--amber-text); }
+  .pl-red    { background: var(--red-bg);   border-color: var(--red-border);   color: var(--red-text); }
+  .pl-teal   { background: var(--teal-bg);  border-color: var(--teal-border);  color: var(--teal-text); }
+
+  .cell {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 10px 12px;
+    font-size: 12px; line-height: 1.6; color: var(--text-primary);
+    display: flex; flex-direction: column; gap: 5px; min-height: 60px;
+  }
+  .cell.empty { background: transparent; border-color: transparent; }
+  .cell ul { padding-left: 14px; margin: 0; }
+  .cell li { color: var(--text-secondary); margin-bottom: 2px; }
+  .cell strong { font-weight: 600; }
+
+  .tag {
+    font-size: 10px; font-weight: 600; padding: 2px 7px;
+    border-radius: 4px; display: inline-block; width: fit-content; border: 1px solid;
+  }
+  .tg-r { background: var(--red-bg);   border-color: var(--red-border);   color: var(--red-text); }
+  .tg-a { background: var(--amber-bg); border-color: var(--amber-border); color: var(--amber-text); }
+  .tg-b { background: var(--blue-bg);  border-color: var(--blue-border);  color: var(--blue-text); }
+  .tg-t { background: var(--teal-bg);  border-color: var(--teal-border);  color: var(--teal-text); }
+  .tg-g { background: var(--gray-bg);  border-color: var(--gray-border);  color: var(--gray-text); }
+
+  .voice-pill {
+    display: inline-block; background: var(--surface2);
+    border: 1px solid var(--border); border-radius: 4px;
+    padding: 3px 8px; font-size: 11px; color: var(--text-secondary);
+    font-style: italic; margin-top: 3px; line-height: 1.55;
+  }
+
+  .divider { height: 1px; background: var(--border); margin: 24px 0 18px; }
+
+  /* ── Confidence tiers ── */
+  .conf-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 16px; }
+  .conf-card { border-radius: 8px; border: 1px solid; padding: 12px 14px; font-size: 12px; line-height: 1.6; }
+  .conf-card .ct { font-weight: 600; margin-bottom: 4px; }
+  .conf-card ul { padding-left: 14px; margin: 0; }
+  .conf-card li { font-size: 11px; margin-bottom: 2px; }
+  .cc-lo { background: var(--green-bg); border-color: var(--green-border); color: var(--green-text); }
+  .cc-mi { background: var(--amber-bg); border-color: var(--amber-border); color: var(--amber-text); }
+  .cc-hi { background: var(--red-bg);   border-color: var(--red-border);   color: var(--red-text); }
+
+  /* ── Tables ── */
+  table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 22px; }
+  th {
+    font-size: 11px; font-weight: 600; color: var(--text-secondary);
+    text-align: left; padding: 7px 12px;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border-strong);
+  }
+  td {
+    padding: 9px 12px; vertical-align: top;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-primary); line-height: 1.6;
+  }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--surface2); }
+  .id-cell {
+    font-family: 'DM Mono', monospace; font-size: 11px;
+    color: var(--text-tertiary); white-space: nowrap;
+  }
+  .script-pill {
+    display: inline-block; background: var(--surface2);
+    border: 1px solid var(--border); border-radius: 4px;
+    padding: 3px 8px; font-size: 12px; color: var(--text-primary);
+    line-height: 1.6; margin: 2px 0;
+  }
+
+  /* ── LED dots ── */
+  .led-row { display: inline-flex; align-items: center; gap: 3px; margin-top: 4px; flex-wrap: wrap; }
+  .led { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .led-g { background: #3A8C2A; }
+  .led-r { background: #D43A2A; }
+  .led-o { background: #C8C3B8; }
+  .led-sep { font-size: 10px; color: var(--text-tertiary); padding: 0 2px; }
+
+  /* ── Vib patterns ── */
+  .vib-row { display: inline-flex; align-items: flex-end; gap: 2px; margin-top: 4px; height: 16px; }
+  .vb { border-radius: 2px; display: inline-block; flex-shrink: 0; }
+  .vb-s { background: #D43A2A; }
+  .vb-w { background: #C8A850; }
+  .vb-gap { background: transparent; }
+
+  /* ── Priority ── */
+  .pri-list { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+  .pri-item { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--text-secondary); }
+  .pri-num {
+    width: 20px; height: 20px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 700; flex-shrink: 0;
+  }
+  .p1 { background: var(--red-bg);   color: var(--red-text); }
+  .p2 { background: var(--green-bg); color: var(--green-text); }
+  .p3 { background: var(--gray-bg);  color: var(--gray-text); }
+
+  .sub-heading {
+    font-size: 12px; font-weight: 600; color: var(--text-secondary);
+    margin: 18px 0 8px; letter-spacing: .04em;
+  }
+  .callout {
+    background: var(--surface2); border-left: 3px solid var(--border-strong);
+    border-radius: 0 6px 6px 0; padding: 10px 14px;
+    font-size: 12px; color: var(--text-secondary); line-height: 1.7;
+    margin-top: 10px;
+  }
+  .callout strong { font-weight: 600; color: var(--text-primary); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-meta">产品设计文档 · 居家养老智能手环</div>
+  <h1>SOS 流程设计</h1>
+  <div class="header-desc">涵盖主动触发与自动摔倒识别的完整 SOS 流程，以及手环 LED 状态机、震动模式对照表与语音播报文案。</div>
+  <div class="header-author">
+    2026.05.11
+    <span class="name">余强</span>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- ══ MAIN TAB BAR ══ -->
+  <div class="main-tab-bar">
+    <button class="main-tab-btn active" onclick="switchMainTab('sos', this)"><span class="tab-index">01</span>SOS 流程总览</button>
+    <button class="main-tab-btn" onclick="switchMainTab('led', this)"><span class="tab-index">02</span>LED 状态机</button>
+    <button class="main-tab-btn" onclick="switchMainTab('vib', this)"><span class="tab-index">03</span>震动模式</button>
+    <button class="main-tab-btn" onclick="switchMainTab('tts', this)"><span class="tab-index">04</span>语音播报文案</button>
+  </div>
+
+  <!-- ══════════ TAB 01: SOS 流程总览 ══════════ -->
+  <div class="main-tab-panel active" id="tab-sos">
+
+    <div class="section-heading">手环可用交互通道</div>
+    <div class="legend">
+      <div class="legend-item"><span class="ldot" style="background:#D43A2A"></span>SOS 键：长按 3 秒触发 / 短按 1 次取消</div>
+      <div class="legend-item"><span class="ldot" style="background:#2A8C5A"></span>语音识别关键词：「我没事」/「需要帮助」</div>
+      <div class="legend-item"><span class="ldot" style="background:#C8A020"></span>LED 指示灯（绿 / 红 双色）</div>
+      <div class="legend-item"><span class="ldot" style="background:#7A5CB8"></span>震动：短震（低威胁）/ 强震（中高威胁 + 主动触发）</div>
+      <div class="legend-item"><span class="ldot" style="background:#3A7AB8"></span>喇叭语音播报（可被高优先级事件打断）</div>
+    </div>
+
+    <div class="info-box green">
+      <div class="ib-title">15 秒窗口期取消机制（通用）</div>
+      进入窗口期后，手环持续 LED 闪烁 + 强震，喇叭播报倒计时提示。取消方式有且仅有两种：<strong>① 短按 SOS 键 1 次</strong>；<strong>② 对麦克说「我没事」</strong>。高置信度场景需<strong>二次确认</strong>取消。老人无手机时，上述方式仍完全有效，主路径不依赖手机。
+    </div>
+
+    <div class="info-box amber">
+      <div class="ib-title">置信度主动升级触发条件（优先级高于倒计时超时）</div>
+      <strong>① 窗口期内长按 SOS 键 3 秒</strong> — 立即升级为高置信度援助，语音播报「好的，已为您立即联系家人」。<br>
+      <strong>② 监测指标实时升级</strong> — 传感器数据达到更高阈值，立即打断原语音，重新播报新阶段文案。
+    </div>
+
+    <!-- TYPE 1 -->
+    <div class="section-heading">类型一：老人主动触发 SOS</div>
+
+    <div class="flow-grid" style="margin-bottom:6px">
+      <div></div>
+      <div class="flow-col-head">手环设备</div>
+      <div class="flow-col-head">用户操作</div>
+      <div class="flow-col-head">后台援助</div>
+      <div class="flow-col-head">APP 反馈</div>
+    </div>
+
+    <div class="flow-grid">
+      <div class="phase-label pl-red">触发<div class="sub">长按 3 秒</div></div>
+      <div class="cell">
+        <span class="tag tg-r">激活</span>
+        <ul>
+          <li>红色 LED 闪烁；强震持续</li>
+          <li>GPS 立即定位上报</li>
+          <li>麦克开启，监听「我没事」</li>
+        </ul>
+        <span class="voice-pill">「SOS 已触发，15 秒后发出，如误触请短按取消」</span>
+      </div>
+      <div class="cell"><ul><li>持续按住 3 秒后松开即触发</li><li>进入 15 秒取消窗口</li></ul></div>
+      <div class="cell"><ul><li>收到触发信号，等待窗口期结束</li></ul></div>
+      <div class="cell">
+        <span class="tag tg-b">老人端</span>
+        <ul><li>全屏倒计时页（若有手机）</li></ul>
+        <span class="tag tg-t" style="margin-top:4px">子女端</span>
+        <ul><li>暂不通知</li></ul>
+      </div>
+    </div>
+
+    <div class="flow-grid" style="margin-top:6px">
+      <div class="phase-label pl-green">窗口期<div class="sub">15 秒取消</div></div>
+      <div class="cell">
+        <ul>
+          <li>喇叭 10 秒、5 秒节点播报</li>
+          <li>红色 LED 持续闪烁，最后 5 秒加速</li>
+          <li>强震持续</li>
+        </ul>
+      </div>
+      <div class="cell">
+        <strong>取消：</strong>
+        <ul><li>短按 SOS 键 1 次</li><li>说「我没事」</li></ul>
+        <strong>加速确认：</strong>
+        <ul><li>窗口期内长按 3 秒 → 立即援助</li></ul>
+      </div>
+      <div class="cell empty"></div>
+      <div class="cell">
+        <span class="tag tg-b">老人端</span>
+        <ul><li>倒计时显示，「取消」可点</li></ul>
+        <span class="tag tg-t" style="margin-top:4px">子女端</span>
+        <ul><li>无通知</li></ul>
+      </div>
+    </div>
+
+    <div class="flow-grid" style="margin-top:6px">
+      <div class="phase-label pl-green">取消结案<div class="sub">短按 / 语音</div></div>
+      <div class="cell">
+        <ul><li>LED 熄灭恢复待机；震动停止</li></ul>
+        <span class="voice-pill">「已取消呼救，如有需要请再次长按」</span>
+      </div>
+      <div class="cell"><ul><li>短按键或说「我没事」触发，无需进一步操作</li></ul></div>
+      <div class="cell"><ul><li>事件标记「主动取消」归档；记录误触频次</li></ul></div>
+      <div class="cell">
+        <span class="tag tg-b">老人端</span>
+        <ul><li>「已取消」提示（若有手机）</li></ul>
+        <span class="tag tg-t" style="margin-top:4px">子女端</span>
+        <ul><li>不通知</li></ul>
+      </div>
+    </div>
+
+    <div class="flow-grid" style="margin-top:6px">
+      <div class="phase-label pl-amber">援助<div class="sub">循环呼叫</div></div>
+      <div class="cell">
+        <span class="tag tg-r">紧急状态</span>
+        <ul>
+          <li>红色 LED 常亮；震动停止</li>
+          <li>通话时麦克 + 喇叭激活</li>
+          <li>GPS 每 30 秒刷新</li>
+        </ul>
+        <span class="voice-pill">「正在联系家人，请稍候」</span>
+      </div>
+      <div class="cell"><ul><li>短按键接听手环来电</li><li>再次短按挂断</li></ul></div>
+      <div class="cell">
+        <span class="tag tg-r">呼叫策略</span>
+        <ul>
+          <li>循环拨打紧急联系人 1（最多 3 次，间隔 30 秒）</li>
+          <li>未接通 → 联系人 2（同策略）</li>
+          <li>仍未接通 → 人工座席介入</li>
+          <li>必要时联系 120 / 社区</li>
+        </ul>
+      </div>
+      <div class="cell">
+        <span class="tag tg-b">老人端</span>
+        <ul><li>来电提示；「我很安全」一键回报</li></ul>
+        <span class="tag tg-t" style="margin-top:4px">子女端</span>
+        <ul><li>高优先级推送：「妈妈触发了 SOS」</li><li>实时 GPS + 导航 + 接入通话</li></ul>
+      </div>
+    </div>
+
+    <div class="flow-grid" style="margin-top:6px">
+      <div class="phase-label pl-teal">结案<div class="sub">安全确认</div></div>
+      <div class="cell">
+        <ul><li>LED 恢复绿色常亮 2 秒后熄灭</li></ul>
+        <span class="voice-pill">「已确认安全，如有需要请再次长按」</span>
+      </div>
+      <div class="cell"><ul><li>由家人 / 座席确认后关闭；老人无需操作</li></ul></div>
+      <div class="cell"><ul><li>事件归档，生成处理记录；推送结案通知</li></ul></div>
+      <div class="cell">
+        <span class="tag tg-b">老人端</span>
+        <ul><li>「已安全」确认页（若有手机）</li></ul>
+        <span class="tag tg-t" style="margin-top:4px">子女端</span>
+        <ul><li>「事件已关闭」通知 + 事件时间线</li></ul>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- TYPE 2 -->
+    <div class="section-heading">类型二：系统自动识别摔倒告警</div>
+    <p style="font-size:12px;color:var(--text-secondary);margin-bottom:14px">主路径均由手环完成，不依赖老人持有手机。</p>
+
+    <div class="conf-grid">
+      <div class="conf-card cc-lo">
+        <div class="ct">低置信度（疑似）</div>
+        <ul><li>加速度异常但幅度小</li><li>可能为坐下 / 弯腰</li><li>无持续静止状态</li></ul>
+      </div>
+      <div class="conf-card cc-mi">
+        <div class="ct">中置信度（可能摔倒）</div>
+        <ul><li>明显冲击加速度峰值</li><li>姿态角大幅变化</li><li>15 秒内低位静止</li></ul>
+      </div>
+      <div class="conf-card cc-hi">
+        <div class="ct">高置信度（确认摔倒）</div>
+        <ul><li>强烈冲击 + 倒地姿态</li><li>静止超 30 秒无自主移动</li><li>心率 / 体征异常波动</li></ul>
+      </div>
+    </div>
+
+    <div class="flow-grid" style="margin-bottom:6px">
+      <div></div>
+      <div class="flow-col-head">手环设备</div>
+      <div class="flow-col-head">用户操作</div>
+      <div class="flow-col-head">后台援助</div>
+      <div class="flow-col-head">APP 反馈</div>
+    </div>
+
+    <div class="flow-grid">
+      <div class="phase-label pl-green" style="font-size:11px">低置信度<div class="sub">静默询问</div></div>
+      <div class="cell">
+        <span class="tag tg-g">待确认</span>
+        <ul><li>单次短震 + 语音，窗口内循环</li><li>麦克持续监听；LED 熄灭</li></ul>
+        <span class="voice-pill">「您还好吗？没事请说我没事或短按，需要帮助请说需要帮助」</span>
+      </div>
+      <div class="cell">
+        <ul>
+          <li>说「我没事」或短按 → 取消</li>
+          <li>说「需要帮助」→ 立即升级援助</li>
+          <li>长按 3 秒 → 立即升级高置信度</li>
+          <li>超时无响应 → 升级中置信度</li>
+        </ul>
+      </div>
+      <div class="cell"><ul><li>记录疑似事件，不触发呼叫</li></ul></div>
+      <div class="cell">
+        <span class="tag tg-b">老人端</span>
+        <ul><li>轻提示弹窗（若有手机）</li></ul>
+        <span class="tag tg-t" style="margin-top:4px">子女端</span>
+        <ul><li>不通知</li></ul>
+      </div>
+    </div>
+
+    <div class="flow-grid" style="margin-top:6px">
+      <div class="phase-label pl-amber" style="font-size:11px">中置信度<div class="sub">主动询问</div></div>
+      <div class="cell">
+        <span class="tag tg-a">告警中</span>
+        <ul><li>红色 LED 慢闪；强震持续</li><li>GPS 立即上报；麦克监听</li></ul>
+        <span class="voice-pill">「检测到您可能摔倒，没事请说我没事或短按，需要帮助请说需要帮助」</span>
+      </div>
+      <div class="cell">
+        <ul>
+          <li>说「我没事」或短按 → 取消</li>
+          <li>说「需要帮助」→ 立即升级援助</li>
+          <li>长按 3 秒 → 立即升级高置信度</li>
+          <li>30 秒无响应 → 自动升级高置信度</li>
+        </ul>
+      </div>
+      <div class="cell"><ul><li>预分配座席，准备介入</li></ul></div>
+      <div class="cell">
+        <span class="tag tg-b">老人端</span>
+        <ul><li>全屏告警弹窗（若有手机）</li></ul>
+        <span class="tag tg-t" style="margin-top:4px">子女端</span>
+        <ul><li>中优先级通知：「可能发生摔倒，等待确认」</li><li>显示位置，可主动拨打手环</li></ul>
+      </div>
+    </div>
+
+    <div class="flow-grid" style="margin-top:6px">
+      <div class="phase-label pl-red" style="font-size:11px">高置信度<div class="sub">直接援助</div></div>
+      <div class="cell">
+        <span class="tag tg-r">紧急状态</span>
+        <ul><li>红色 LED 慢闪，最后 5 秒加速</li><li>强震持续；GPS 每 15 秒刷新</li><li>麦克采集环境音 + 监听取消</li></ul>
+        <span class="voice-pill">「已监测到摔倒，15 秒后为您联系家人，如无需帮助请短按取消」</span>
+      </div>
+      <div class="cell">
+        <ul><li>说「我没事」或短按 → 触发二次确认</li></ul>
+        <span class="voice-pill">「确认取消请再说一次我没事」</span>
+        <ul><li>二次确认后取消；否则继续倒计时</li><li>长按 3 秒 → 跳过倒计时立即援助</li></ul>
+        <span class="voice-pill">「好的，已为您立即联系家人」</span>
+      </div>
+      <div class="cell">
+        <span class="tag tg-r">同主动 SOS 援助阶段</span>
+        <ul>
+          <li>循环拨打紧急联系人</li>
+          <li>未接通 → 人工座席介入</li>
+          <li>座席可远程监听环境音（需用户授权）</li>
+          <li>必要时联系 120 / 社区</li>
+        </ul>
+      </div>
+      <div class="cell">
+        <span class="tag tg-b">老人端</span>
+        <ul><li>全屏告警（若有手机）；取消需二次确认</li></ul>
+        <span class="tag tg-t" style="margin-top:4px">子女端</span>
+        <ul><li>高优先级通知（同主动 SOS）</li><li>实时位置 + 通话入口</li></ul>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+    <div class="section-heading">高置信度取消后 · 回访机制</div>
+    <div class="info-box amber">
+      <strong>适用场景：</strong>老人在高置信度摔倒告警中主动取消。考虑到内出血（5～30 分钟）、脑震荡（15～30 分钟）、骨折（10～20 分钟）等损伤的延迟症状显现，取消后不立即结案，启动静默观察 + 人工回访流程。<br><br>
+      <strong>流程：</strong>取消后进入 <strong>20 分钟静默观察期</strong>，手环持续监测体征与活动度。若观察期内传感器发现异常（心率持续偏高且活动度为零），提前触发座席回访，不等满 20 分钟。20 分钟后，<strong>人工座席电话回访一次</strong>，座席根据通话判断是否结案。若回访无人接听或座席判断状态异常，立即升级为援助流程。
+    </div>
+
+    <div class="divider"></div>
+    <div class="section-heading">误报 / 撤回处理</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="cell">
+        <span class="tag tg-g">误触主动 SOS</span>
+        <ul>
+          <li>15 秒内短按键或说「我没事」取消</li>
+          <li>后台标记「误触」，不触发呼叫，子女端不通知</li>
+          <li>误触频次记录，超阈值提示调整灵敏度</li>
+        </ul>
+      </div>
+      <div class="cell">
+        <span class="tag tg-g">自动告警误报</span>
+        <ul>
+          <li>低 / 中置信：窗口内说「我没事」或短按即取消</li>
+          <li>高置信：需二次确认取消，降低意外撤回风险</li>
+          <li>误报数据归档，用于模型迭代优化</li>
+          <li>子女已通知时推送「误报，已确认安全」</li>
+        </ul>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ══════════ TAB 02: LED ══════════ -->
+  <div class="main-tab-panel" id="tab-led">
+
+    <div class="callout" style="margin-bottom:20px">
+      硬件规格：<strong>3 × 1×1 mm LED 指示灯</strong>。颜色体系精简为<strong>绿 / 红</strong>两色，橙色完全移除。日常待机三灯熄灭，不打扰老人。
+    </div>
+
+    <div class="sub-heading">一、正常 / 开机状态</div>
+    <table>
+      <tr><th style="width:140px">场景</th><th style="width:60px">颜色</th><th style="width:160px">三灯模式</th><th style="width:110px">频率 / 时长</th><th>配合通道</th></tr>
+      <tr>
+        <td>开机 / 重启</td>
+        <td><span class="tag" style="background:var(--green-bg);border-color:var(--green-border);color:var(--green-text)">绿</span></td>
+        <td>三灯从左到右依次点亮后全灭
+          <div class="led-row"><span class="led led-g"></span><span class="led led-o"></span><span class="led led-o"></span><span class="led-sep">→</span><span class="led led-g"></span><span class="led led-g"></span><span class="led led-o"></span><span class="led-sep">→</span><span class="led led-g"></span><span class="led led-g"></span><span class="led led-g"></span><span class="led-sep">→ 全灭</span></div>
+        </td>
+        <td>序列一次，约 1.5 秒</td><td>无</td>
+      </tr>
+      <tr><td>待机（正常运行）</td><td><span class="tag tg-g">熄灭</span></td><td>三灯全灭</td><td>—</td><td>无</td></tr>
+    </table>
+
+    <div class="sub-heading">二、电量状态</div>
+    <table>
+      <tr><th style="width:140px">场景</th><th style="width:60px">颜色</th><th style="width:160px">三灯模式</th><th style="width:110px">频率 / 时长</th><th>配合通道</th></tr>
+      <tr>
+        <td>充电中</td>
+        <td><span class="tag" style="background:var(--green-bg);border-color:var(--green-border);color:var(--green-text)">绿</span></td>
+        <td>三灯循环逐亮后全灭
+          <div class="led-row"><span class="led led-g"></span><span class="led led-o"></span><span class="led led-o"></span><span class="led-sep">→</span><span class="led led-g"></span><span class="led led-g"></span><span class="led led-o"></span><span class="led-sep">→</span><span class="led led-g"></span><span class="led led-g"></span><span class="led led-g"></span><span class="led-sep">→ 循环</span></div>
+        </td>
+        <td>每轮约 2 秒，持续循环</td><td>无</td>
+      </tr>
+      <tr>
+        <td>充电完成</td>
+        <td><span class="tag" style="background:var(--green-bg);border-color:var(--green-border);color:var(--green-text)">绿</span></td>
+        <td>三灯常亮<div class="led-row"><span class="led led-g"></span><span class="led led-g"></span><span class="led led-g"></span></div></td>
+        <td>常亮至拔出充电器</td><td>无</td>
+      </tr>
+      <tr><td>低电提醒（≤20%）</td><td><span class="tag tg-g">熄灭</span></td><td>三灯不亮</td><td>—</td><td>短震一次 + 语音播报</td></tr>
+      <tr><td>极低电量（≤5%）</td><td><span class="tag tg-g">熄灭</span></td><td>三灯不亮</td><td>—</td><td>短震一次 + 语音二次播报</td></tr>
+    </table>
+
+    <div class="sub-heading">三、SOS 状态（含子阶段）</div>
+    <table>
+      <tr><th style="width:140px">场景</th><th style="width:60px">颜色</th><th style="width:160px">三灯模式</th><th style="width:110px">频率 / 时长</th><th>配合通道</th></tr>
+      <tr>
+        <td>SOS 窗口期</td><td><span class="tag tg-r">红</span></td>
+        <td>三灯同步慢闪，最后 5 秒切快闪<div class="led-row"><span class="led led-r"></span><span class="led led-r"></span><span class="led led-r"></span></div></td>
+        <td>0.8s亮/0.5s灭；最后5秒 0.3s/0.3s</td><td>强震持续 + 语音倒计时</td>
+      </tr>
+      <tr>
+        <td>援助中</td><td><span class="tag tg-r">红</span></td>
+        <td>三灯常亮<div class="led-row"><span class="led led-r"></span><span class="led led-r"></span><span class="led led-r"></span></div></td>
+        <td>常亮至结案</td><td>语音播报「正在联系家人」</td>
+      </tr>
+      <tr>
+        <td>SOS 结案</td>
+        <td><span class="tag" style="background:var(--green-bg);border-color:var(--green-border);color:var(--green-text)">绿</span></td>
+        <td>三灯常亮 2 秒后熄灭<div class="led-row"><span class="led led-g"></span><span class="led led-g"></span><span class="led led-g"></span><span class="led-sep">→ 全灭</span></div></td>
+        <td>常亮 2 秒后自动熄灭</td><td>语音播报「已确认安全」</td>
+      </tr>
+      <tr>
+        <td>SOS 窗口期内主动取消</td>
+        <td><span class="tag" style="background:var(--green-bg);border-color:var(--green-border);color:var(--green-text)">绿</span></td>
+        <td>三灯快闪 2 次后熄灭<div class="led-row"><span class="led led-g"></span><span class="led led-g"></span><span class="led led-g"></span><span class="led-sep">×2 → 全灭</span></div></td>
+        <td>每次约 0.3 秒，共约 1 秒</td><td>语音播报「已取消呼救」</td>
+      </tr>
+    </table>
+
+    <div class="sub-heading">四、自动摔倒告警（统一处理）</div>
+    <table>
+      <tr><th style="width:140px">场景</th><th style="width:60px">颜色</th><th style="width:160px">三灯模式</th><th style="width:110px">频率 / 时长</th><th>配合通道</th></tr>
+      <tr><td>低置信度询问窗口</td><td><span class="tag tg-g">熄灭</span></td><td>三灯不亮</td><td>—</td><td>单次短震 + 语音循环播报</td></tr>
+      <tr>
+        <td>中置信度询问窗口</td><td><span class="tag tg-r">红</span></td>
+        <td>三灯慢闪<div class="led-row"><span class="led led-r"></span><span class="led led-r"></span><span class="led led-r"></span></div></td>
+        <td>0.8s亮/0.5s灭，持续</td><td>强震持续 + 语音播报</td>
+      </tr>
+      <tr>
+        <td>高置信度窗口期及援助</td><td><span class="tag tg-r">红</span></td>
+        <td>同主动 SOS 对应阶段<div class="led-row"><span class="led led-r"></span><span class="led led-r"></span><span class="led led-r"></span></div></td>
+        <td>同主动 SOS 规则</td><td>同主动 SOS 对应阶段</td>
+      </tr>
+    </table>
+
+    <div class="sub-heading">五、状态优先级</div>
+    <div class="pri-list">
+      <div class="pri-item"><span class="pri-num p1">1</span>SOS / 摔倒告警（红色，最高）</div>
+      <div class="pri-item"><span class="pri-num p2">2</span>充电状态（绿色）</div>
+      <div class="pri-item"><span class="pri-num p3">3</span>待机 / 低电（熄灭，最低）</div>
+    </div>
+    <div class="callout">并发规则：SOS 触发时充电灯立即被覆盖，结案后若仍在充电则恢复充电动画。低电状态无 LED，不存在被覆盖的问题。</div>
+
+  </div>
+
+  <!-- ══════════ TAB 03: 震动 ══════════ -->
+  <div class="main-tab-panel" id="tab-vib">
+
+    <div class="callout" style="margin-bottom:20px">
+      可用节奏模式共 <strong>4 种</strong>：强震持续 / 强震一次 / 短震持续 / 短震一次。强度差异传递紧急程度，节奏差异传递持续性与状态变化。
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:24px">
+      <div class="cell">
+        <strong>强震持续</strong>
+        <div class="vib-row"><span class="vb vb-s" style="width:10px;height:14px"></span><span class="vb vb-gap" style="width:3px"></span><span class="vb vb-s" style="width:10px;height:14px"></span><span class="vb vb-gap" style="width:3px"></span><span class="vb vb-s" style="width:10px;height:14px"></span><span class="vb vb-gap" style="width:3px"></span><span class="vb vb-s" style="width:10px;height:14px"></span></div>
+        <span style="font-size:11px;color:var(--text-secondary)">高强度循环，直至状态变化。传递持续紧急感。</span>
+      </div>
+      <div class="cell">
+        <strong>强震一次</strong>
+        <div class="vib-row"><span class="vb vb-s" style="width:14px;height:14px"></span><span class="vb vb-gap" style="width:36px"></span></div>
+        <span style="font-size:11px;color:var(--text-secondary)">高强度单次触发即停。传递明确的「事件发生」信号。</span>
+      </div>
+      <div class="cell">
+        <strong>短震持续</strong>
+        <div class="vib-row"><span class="vb vb-w" style="width:5px;height:9px"></span><span class="vb vb-gap" style="width:4px"></span><span class="vb vb-w" style="width:5px;height:9px"></span><span class="vb vb-gap" style="width:4px"></span><span class="vb vb-w" style="width:5px;height:9px"></span><span class="vb vb-gap" style="width:4px"></span><span class="vb vb-w" style="width:5px;height:9px"></span><span class="vb vb-gap" style="width:4px"></span><span class="vb vb-w" style="width:5px;height:9px"></span></div>
+        <span style="font-size:11px;color:var(--text-secondary)">低强度循环轻触，随语音周期同步。传递温和持续提醒感。</span>
+      </div>
+      <div class="cell">
+        <strong>短震一次</strong>
+        <div class="vib-row"><span class="vb vb-w" style="width:7px;height:9px"></span><span class="vb vb-gap" style="width:36px"></span></div>
+        <span style="font-size:11px;color:var(--text-secondary)">低强度单次触发即停。传递轻提示或操作确认反馈。</span>
+      </div>
+    </div>
+
+    <div class="sub-heading">一、正常 / 开机状态</div>
+    <table>
+      <tr><th style="width:160px">场景</th><th style="width:110px">震动模式</th><th style="width:110px">触发时机</th><th>说明</th></tr>
+      <tr><td>开机 / 重启</td><td><span class="tag tg-g">短震一次</span></td><td>开机完成时</td><td>告知设备已就绪，与 LED 序列动画同步</td></tr>
+      <tr><td>待机</td><td><span class="tag tg-g">无</span></td><td>—</td><td>日常不打扰</td></tr>
+    </table>
+
+    <div class="sub-heading">二、电量状态</div>
+    <table>
+      <tr><th style="width:160px">场景</th><th style="width:110px">震动模式</th><th style="width:110px">触发时机</th><th>说明</th></tr>
+      <tr><td>充电中 / 充电完成</td><td><span class="tag tg-g">无</span></td><td>—</td><td>充电靠 LED 感知，不用震动打扰</td></tr>
+      <tr><td>低电提醒（≤20%）</td><td><span class="tag tg-a">短震一次</span></td><td>触达阈值时</td><td>配合语音播报；轻提示不引起恐慌</td></tr>
+      <tr><td>极低电量（≤5%）</td><td><span class="tag tg-a">短震一次</span></td><td>触达阈值时</td><td>配合语音二次播报；靠语音内容区分严重程度</td></tr>
+    </table>
+
+    <div class="sub-heading">三、SOS 状态</div>
+    <table>
+      <tr><th style="width:160px">场景</th><th style="width:110px">震动模式</th><th style="width:110px">触发时机</th><th>说明</th></tr>
+      <tr><td>SOS 窗口期</td><td><span class="tag tg-r">强震持续</span></td><td>触发即开始，持续至窗口期结束或取消</td><td>配合红色 LED 慢闪；让老人清晰感知「正在倒计时」</td></tr>
+      <tr><td>援助中</td><td><span class="tag tg-g">无</span></td><td>窗口期结束后停止</td><td>进入援助后停止震动，避免通话干扰；靠红色 LED 常亮维持紧急感知</td></tr>
+      <tr><td>SOS 结案</td><td><span class="tag tg-g">短震一次</span></td><td>结案时</td><td>配合绿灯亮起，给老人明确的「结束」反馈</td></tr>
+      <tr><td>SOS 窗口期内主动取消</td><td><span class="tag tg-g">短震一次</span></td><td>取消确认时</td><td>强震停止后接一次短震，形成明确「停止」感；配合语音播报</td></tr>
+      <tr><td>长按加速（立即援助）</td><td><span class="tag tg-r">强震一次</span></td><td>长按识别成功瞬间</td><td>强震持续切换为强震一次，给老人「已确认收到」的即时反馈；随后进入援助中（无震动）</td></tr>
+    </table>
+
+    <div class="sub-heading">四、自动摔倒告警</div>
+    <table>
+      <tr><th style="width:160px">场景</th><th style="width:110px">震动模式</th><th style="width:110px">触发时机</th><th>说明</th></tr>
+      <tr><td>低置信度询问</td><td><span class="tag tg-a">短震持续</span></td><td>随语音播报周期同步</td><td>每次语音播报前触发一次短震，形成「震动+语音」配对节奏</td></tr>
+      <tr><td>中置信度询问</td><td><span class="tag tg-r">强震持续</span></td><td>触发即开始，持续至响应或升级</td><td>配合红色 LED 慢闪；强度升级让老人感知严重程度提高</td></tr>
+      <tr><td>高置信度窗口期</td><td><span class="tag tg-r">强震持续</span></td><td>同主动 SOS 窗口期</td><td>与主动 SOS 窗口期完全一致，老人无需区分来源</td></tr>
+      <tr><td>置信度升级（指标触发）</td><td><span class="tag tg-r">强震一次</span></td><td>升级判定瞬间</td><td>打断原震动模式，先给一次强震作为「状态切换」信号，随后进入新阶段震动模式</td></tr>
+      <tr><td>取消确认（说「我没事」或短按）</td><td><span class="tag tg-g">短震一次</span></td><td>识别成功时</td><td>统一的「操作已确认」反馈，与 SOS 取消一致</td></tr>
+    </table>
+
+    <div class="sub-heading">五、优先级与并发规则</div>
+    <table>
+      <tr><th style="width:180px">规则</th><th>说明</th></tr>
+      <tr><td>高优先级覆盖低优先级</td><td>强震持续 &gt; 强震一次 &gt; 短震持续 &gt; 短震一次 &gt; 无震动。高优先级进入时立即中断当前震动。</td></tr>
+      <tr><td>状态切换信号</td><td>任何从「持续震动」切换到「无震动」的时刻，插入一次短震一次作为结束信号，避免老人感觉震动突然消失而困惑。</td></tr>
+      <tr><td>低电与 SOS 并发</td><td>SOS 触发后低电震动挂起；结案后若仍低电，重新触发短震一次 + 语音播报提醒。</td></tr>
+    </table>
+
+  </div>
+
+  <!-- ══════════ TAB 04: TTS ══════════ -->
+  <div class="main-tab-panel" id="tab-tts">
+
+    <div class="callout" style="margin-bottom:20px">
+      共 <strong>17 条</strong>，实际需录制独立音频 <strong>12 条</strong>（5 条跨场景复用）。称谓统一用「您」，风格简洁，不使用数字倒计时播报，仅在 10 秒、5 秒节点语音提示。
+    </div>
+
+    <div class="sub-heading">一、电量提醒</div>
+    <table>
+      <tr><th style="width:40px">编号</th><th style="width:120px">场景</th><th style="width:130px">触发时机</th><th>播报文案</th><th style="width:80px">播报次数</th></tr>
+      <tr><td class="id-cell">P-01</td><td>低电提醒</td><td>电量降至 ≤20%</td><td><span class="script-pill">电量不足，请尽快充电</span></td><td>一次</td></tr>
+      <tr><td class="id-cell">P-02</td><td>极低电量</td><td>电量降至 ≤5%</td><td><span class="script-pill">电量即将耗尽，请立即充电</span></td><td>一次</td></tr>
+    </table>
+
+    <div class="sub-heading">二、主动 SOS</div>
+    <table>
+      <tr><th style="width:40px">编号</th><th style="width:120px">场景</th><th style="width:130px">触发时机</th><th>播报文案</th><th style="width:80px">播报次数</th></tr>
+      <tr><td class="id-cell">A-01</td><td>SOS 窗口期开始</td><td>长按 3 秒触发瞬间</td><td><span class="script-pill">SOS 已触发，15 秒后发出，如误触请短按取消</span></td><td>一次</td></tr>
+      <tr><td class="id-cell">A-02</td><td>倒计时 10 秒节点</td><td>窗口期进入第 5 秒</td><td><span class="script-pill">还有 10 秒</span></td><td>一次</td></tr>
+      <tr><td class="id-cell">A-03</td><td>倒计时 5 秒节点</td><td>窗口期进入第 10 秒</td><td><span class="script-pill">还有 5 秒</span></td><td>一次</td></tr>
+      <tr><td class="id-cell">A-04</td><td>窗口期内主动取消</td><td>短按键或说「我没事」识别成功</td><td><span class="script-pill">已取消呼救，如有需要请再次长按</span></td><td>一次</td></tr>
+      <tr><td class="id-cell">A-05</td><td>进入援助（倒计时结束）</td><td>窗口期自然结束</td><td><span class="script-pill">正在联系家人，请稍候</span></td><td>一次</td></tr>
+      <tr><td class="id-cell">A-05b</td><td>进入援助（长按加速）</td><td>窗口期内长按 3 秒</td><td><span class="script-pill">好的，已为您立即联系家人</span></td><td>一次</td></tr>
+      <tr><td class="id-cell">A-06</td><td>结案</td><td>家人 / 座席确认安全</td><td><span class="script-pill">已确认安全，如有需要请再次长按</span></td><td>一次</td></tr>
+    </table>
+
+    <div class="sub-heading">三、自动摔倒告警</div>
+    <table>
+      <tr><th style="width:40px">编号</th><th style="width:120px">场景</th><th style="width:130px">触发时机</th><th>播报文案</th><th style="width:80px">播报次数</th></tr>
+      <tr><td class="id-cell">F-01</td><td>低置信度询问</td><td>检测到疑似摔倒，随短震周期循环</td><td><span class="script-pill">您还好吗？没事请说我没事或短按，需要帮助请说需要帮助</span></td><td>窗口内循环</td></tr>
+      <tr><td class="id-cell">F-02</td><td>中置信度询问</td><td>检测到可能摔倒，打断 F-01</td><td><span class="script-pill">检测到您可能摔倒，没事请说我没事或短按，需要帮助请说需要帮助</span></td><td>窗口内循环</td></tr>
+      <tr><td class="id-cell">F-03</td><td>高置信度窗口期开始</td><td>进入高置信度，打断 F-02</td><td><span class="script-pill">已监测到摔倒，15 秒后为您联系家人，如无需帮助请短按取消</span></td><td>一次</td></tr>
+      <tr><td class="id-cell">F-04</td><td>高置信度倒计时 10 秒</td><td>窗口期进入第 5 秒</td><td><span class="script-pill">还有 10 秒</span></td><td>一次</td></tr>
+      <tr><td class="id-cell">F-05</td><td>高置信度倒计时 5 秒</td><td>窗口期进入第 10 秒</td><td><span class="script-pill">还有 5 秒</span></td><td>一次</td></tr>
+      <tr><td class="id-cell">F-06</td><td>高置信度取消（一次确认）</td><td>短按键或说「我没事」识别成功</td><td><span class="script-pill">确认取消请再说一次我没事</span></td><td>一次</td></tr>
+      <tr><td class="id-cell">F-07</td><td>高置信度取消（二次确认完成）</td><td>二次「我没事」识别成功</td><td><span class="script-pill">已取消呼救，如有需要请再次长按</span></td><td>一次</td></tr>
+      <tr><td class="id-cell">F-08</td><td>进入援助（倒计时结束）</td><td>窗口期自然结束</td><td><span class="script-pill">正在联系家人，请稍候</span></td><td>一次</td></tr>
+      <tr><td class="id-cell">F-08b</td><td>进入援助（长按加速）</td><td>窗口期内长按 3 秒</td><td><span class="script-pill">好的，已为您立即联系家人</span></td><td>一次</td></tr>
+      <tr><td class="id-cell">F-09</td><td>结案</td><td>家人 / 座席确认安全</td><td><span class="script-pill">已确认安全，如有需要请再次长按</span></td><td>一次</td></tr>
+    </table>
+
+    <div class="sub-heading">四、复用说明（TTS 录制可合并）</div>
+    <table>
+      <tr><th style="width:280px">文案</th><th>复用场景</th></tr>
+      <tr><td><span class="script-pill">还有 10 秒</span></td><td>A-02 与 F-04 一致，录制一条</td></tr>
+      <tr><td><span class="script-pill">还有 5 秒</span></td><td>A-03 与 F-05 一致，录制一条</td></tr>
+      <tr><td><span class="script-pill">正在联系家人，请稍候</span></td><td>A-05 与 F-08 一致</td></tr>
+      <tr><td><span class="script-pill">好的，已为您立即联系家人</span></td><td>A-05b 与 F-08b 一致</td></tr>
+      <tr><td><span class="script-pill">已取消呼救，如有需要请再次长按</span></td><td>A-04 与 F-07 一致</td></tr>
+      <tr><td><span class="script-pill">已确认安全，如有需要请再次长按</span></td><td>A-06 与 F-09 一致</td></tr>
+    </table>
+
+  </div>
+
+</div>
+
+<script>
+function switchMainTab(id, btn) {
+  document.querySelectorAll('.main-tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.main-tab-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  btn.classList.add('active');
+}
+</script>
+</body>
+</html>
